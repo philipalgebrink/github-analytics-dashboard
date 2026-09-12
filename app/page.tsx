@@ -1,69 +1,117 @@
-import Image from "next/image";
+import { getProfile, getRepos } from "@/lib/github";
+import { getContributionCalendar } from "@/lib/githubGraphql";
+import { GITHUB_USERNAME } from "@/lib/constants";
+import ProfileHeader from "@/components/ProfileHeader";
+import StatsCards from "@/components/StatsCards";
+import LanguageChart from "@/components/LanguageChart";
+import TopRepos from "@/components/TopRepos";
+import ContributionHeatmap from "@/components/ContributionHeatmap";
+import type { GithubProfile, GithubRepo, ContributionDay, LanguageSlice } from "@/types/github";
 
-export default function Home() {
+function SectionError({ message }: { message: string }) {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <p className="rounded-lg border border-red-900/50 bg-red-950/30 p-4 text-sm text-red-400">
+      {message}
+    </p>
+  );
+}
+
+function aggregateLanguages(repos: GithubRepo[]): LanguageSlice[] {
+  const counts = new Map<string, number>();
+  for (const repo of repos) {
+    if (!repo.language) continue;
+    counts.set(repo.language, (counts.get(repo.language) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+export default async function Home() {
+  let profile: GithubProfile | null = null;
+  let profileError: string | null = null;
+  try {
+    profile = await getProfile(GITHUB_USERNAME);
+  } catch (err) {
+    profileError = err instanceof Error ? err.message : "Failed to load profile";
+  }
+
+  let repos: GithubRepo[] = [];
+  let reposError: string | null = null;
+  try {
+    repos = await getRepos(GITHUB_USERNAME);
+  } catch (err) {
+    reposError = err instanceof Error ? err.message : "Failed to load repositories";
+  }
+
+  let contributionDays: ContributionDay[] = [];
+  let totalContributions = 0;
+  let contributionsError: string | null = null;
+  try {
+    const result = await getContributionCalendar(GITHUB_USERNAME);
+    contributionDays = result.days;
+    totalContributions = result.totalContributions;
+  } catch (err) {
+    contributionsError =
+      err instanceof Error ? err.message : "Failed to load contribution calendar";
+  }
+
+  const languages = aggregateLanguages(repos);
+  const totalStars = repos.reduce((sum, repo) => sum + repo.stargazers_count, 0);
+  const totalForks = repos.reduce((sum, repo) => sum + repo.forks_count, 0);
+  const topLanguage = languages[0]?.name ?? null;
+  const topRepos = [...repos]
+    .sort((a, b) => b.stargazers_count - a.stargazers_count)
+    .slice(0, 6);
+
+  return (
+    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-10 px-6 py-12">
+      {profile && !profileError ? (
+        <ProfileHeader profile={profile} />
+      ) : (
+        <SectionError message={profileError ?? "Profile unavailable."} />
+      )}
+
+      {!reposError ? (
+        <StatsCards
+          publicRepos={repos.length}
+          totalStars={totalStars}
+          totalForks={totalForks}
+          topLanguage={topLanguage}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      ) : (
+        <SectionError message={reposError} />
+      )}
+
+      <section className="min-w-0">
+        <h2 className="mb-4 text-lg font-semibold text-zinc-200">Contributions</h2>
+        {!contributionsError ? (
+          <ContributionHeatmap
+            data={contributionDays}
+            totalContributions={totalContributions}
+          />
+        ) : (
+          <SectionError message={contributionsError} />
+        )}
+      </section>
+
+      <section className="min-w-0">
+        <h2 className="mb-4 text-lg font-semibold text-zinc-200">Languages</h2>
+        {!reposError ? (
+          <LanguageChart data={languages} />
+        ) : (
+          <SectionError message={reposError} />
+        )}
+      </section>
+
+      <section className="min-w-0">
+        <h2 className="mb-4 text-lg font-semibold text-zinc-200">Top Repositories</h2>
+        {!reposError ? (
+          <TopRepos repos={topRepos} />
+        ) : (
+          <SectionError message={reposError} />
+        )}
+      </section>
     </div>
   );
 }
