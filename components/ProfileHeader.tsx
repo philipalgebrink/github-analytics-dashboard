@@ -20,7 +20,7 @@ export default function ProfileHeader({ profile }: { profile: GithubProfile }) {
           href={profile.html_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-zinc-400 hover:text-emerald-400"
+          className="text-sm text-zinc-400 hover:text-brand"
         >
           @{profile.login}
         </a>

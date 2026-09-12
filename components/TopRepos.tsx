@@ -13,7 +13,7 @@ export default function TopRepos({ repos }: { repos: GithubRepo[] }) {
           href={repo.html_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 transition-colors hover:border-emerald-500/50"
+          className="flex flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 transition-colors hover:border-brand/50"
         >
           <span className="font-semibold text-zinc-50">{repo.name}</span>
           <p className="line-clamp-2 text-sm text-zinc-400">

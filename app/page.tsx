@@ -6,6 +6,7 @@ import StatsCards from "@/components/StatsCards";
 import LanguageChart from "@/components/LanguageChart";
 import TopRepos from "@/components/TopRepos";
 import ContributionHeatmap from "@/components/ContributionHeatmap";
+import Footer from "@/components/Footer";
 import type { GithubProfile, GithubRepo, ContributionDay, LanguageSlice } from "@/types/github";
 
 function SectionError({ message }: { message: string }) {
@@ -112,6 +113,8 @@ export default async function Home() {
           <SectionError message={reposError} />
         )}
       </section>
+
+      <Footer />
     </div>
   );
 }

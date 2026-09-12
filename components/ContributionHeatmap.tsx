@@ -3,8 +3,10 @@
 import { ActivityCalendar } from "react-activity-calendar";
 import type { ContributionDay } from "@/types/github";
 
+// Ends on the same brand green (#48bb78) used across the rest of this
+// dashboard and the main portfolio, instead of GitHub's default palette.
 const theme = {
-  dark: ["#18181b", "#0e4429", "#006d32", "#26a641", "#39d353"],
+  dark: ["#18181b", "#1b4332", "#2d6a4f", "#3ca873", "#48bb78"],
 };
 
 export default function ContributionHeatmap({
